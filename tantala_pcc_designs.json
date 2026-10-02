@@ -1,0 +1,54 @@
+{
+    "designs": [
+        {
+            "name": "design-1",
+            "period": 1.1323,
+            "period_taper": 0.117565,
+            "hole_rad_x": 0.35354,
+            "hole_rad_y": 0.35354,
+            "hole_rad_x_taper": 0,
+            "hole_rad_y_taper": 0,
+            "single_side_cavity_hole_num": 12
+        },
+        {
+            "name": "design-2",
+            "period": 1.150792,
+            "period_taper": 0.1888,
+            "hole_rad_x": 0.2574,
+            "hole_rad_y": 0.5205,
+            "hole_rad_x_taper": 0,
+            "hole_rad_y_taper": 0.4,
+            "single_side_cavity_hole_num": 12
+        },
+        {
+            "name": "design-3",
+            "period": 1.12426,
+            "period_taper": 0.20747,
+            "hole_rad_x": 0.1895,
+            "hole_rad_y": 0.3936,
+            "hole_rad_x_taper": 0,
+            "hole_rad_y_taper": 0.5,
+            "single_side_cavity_hole_num": 12
+        },
+        {
+            "name": "design-4",
+            "period": 1.1845839,
+            "period_taper": 0.207477,
+            "hole_rad_x": 0.2979,
+            "hole_rad_y": 0.44861,
+            "hole_rad_x_taper": 0.3217,
+            "hole_rad_y_taper": 0,
+            "single_side_cavity_hole_num": 12
+        },
+        {
+            "name": "design-5",
+            "period": 1.22944,
+            "period_taper": 0.207477,
+            "hole_rad_x": 0.3428,
+            "hole_rad_y": 0.3428,
+            "hole_rad_x_taper": 0.1648,
+            "hole_rad_y_taper": 0.1648,
+            "single_side_cavity_hole_num": 12
+        }
+    ]
+}
