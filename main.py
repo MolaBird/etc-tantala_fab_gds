@@ -44,6 +44,16 @@ def init_pos_of_nanobeams():
     RelPosYOfNanobeams = ytop - (idx + 0.5) * NANOBEAM_SPACING
 
 
+def AuxLine_mark_main_region(cell, layer, datatype=0):
+    rect = gdstk.rectangle(
+        (0, 0),
+        (WIDTH, HEIGHT),
+        layer=layer,
+        datatype=datatype
+    )
+    cell.add(rect)
+
+
 def AuxLine_draw_main_grid(cell, layer, datatype=0, line_width=0.1):
     """
     Draws a grid pattern on a specified layer using FlexPaths.
@@ -226,7 +236,7 @@ def Main_place_holes(layer, datatype=0):
     for i in range(NROW):
         for j in range(NCOL):
             xc, yc = PosOfUnits[i, j]
-            design = j % len(DesignConfig)
+            design = j // UNITREPLICA_NUM
             scaling = SCALING_LIST[i]
             for k in range(NANOBEAM_NUM_PER_UNIT):
                 if k == 0:
@@ -282,6 +292,8 @@ SIDEWALL_CORNER_RAD = 0.8
 UNITREGION_W = SIDEWALL_W + SIDEWALL_GAP + SIDEWALL_W
 UNITREGION_H = SIDEWALL_H
 
+UNITREPLICA_NUM = 4
+
 COUPLER_REGION_W = 9
 COUPLER_REGION_H = 9
 COUPLER_REGION_OFFSET_FROM_WALL = 2
@@ -307,7 +319,8 @@ if __name__ == "__main__":
     init_pos_of_units()
     init_pos_of_nanobeams()
 
-    # AuxLine_mark_unit_regions(my_cell, layer=1)
+    # AuxLine_mark_main_region(my_cell, layer=1)
+    AuxLine_mark_main_region(my_cell, layer=1)
     AuxLine_mark_coupler_regions(my_cell, layer=1)
 
     Main_place_sidewalls(layer=2)
