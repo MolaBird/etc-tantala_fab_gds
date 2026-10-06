@@ -25,6 +25,12 @@ def load_design_config():
         return json.load(f)['designs']
 
 
+def load_couplers():
+    global GDS_coupler_1
+    lib = gdstk.read_gds(fp_coupler_1)
+    GDS_coupler_1 = lib.cells[0].polygons
+
+
 def init_pos_of_units():
     global PosOfUnits
     step_x = WIDTH / NCOL
@@ -261,6 +267,10 @@ def Main_place_holes(layer, datatype=0):
                 )
 
 
+def Main_place_couplers(layer, datatype=0):
+    # for i, j in
+
+
 def save_and_export_preview(lib, gds_filename="output.gds", svg_filename="preview.svg"):
     # Save the standard GDSII file
     lib.write_gds(gds_filename)
@@ -313,9 +323,12 @@ GDS_nanobeams = []
 GDS_pcc = []
 GDS_sidewalls = []
 
+fp_coupler_1 = "./coupler_old.gds"
+GDS_coupler_1 = None
+
 
 if __name__ == "__main__":
-    my_lib, my_cell = init_gds_lib(lib_name="PhC_Arrays", main_cell_name="OP")
+    my_lib, my_cell = init_gds_lib(lib_name="tantala-fab-2", main_cell_name="main")
     init_pos_of_units()
     init_pos_of_nanobeams()
 
