@@ -2,8 +2,8 @@
 
 import gdstk
 import numpy as np
-LAYER_MAIN = 1
-LAYER_AUX = 2
+LAYER_MAIN = 0
+LAYER_AUX = 1
 
 
 def _iter_units():
@@ -187,63 +187,64 @@ def Main_gen_nanobeams(layer=LAYER_MAIN, datatype=0):
         place_1_nanobeam(i, j, k)
 
 
-def Main_gen_holes(layer=LAYER_MAIN, datatype=0):
-    global GDS_pcc
+
+def _place_1_device(design, scaling, single_side_mirror_hole_num, xc, yc, layer, datatype=0):
     def _tapering(distance, taper_factor):
         dmax = taper_factor  
         d = distance 
         taper = 1 - dmax*np.abs(2*d**3 - 3*d**2 + 1)
         return taper
+    rx = design['hole_rad_x'] * scaling
+    ry = design['hole_rad_y'] * scaling
+    period = design['period'] * scaling
+    n_cav_hole = design['single_side_cavity_hole_num']
+    arr_cavityhole_idx = np.arange(1, n_cav_hole+1)
+    arr_normalized_pos = arr_cavityhole_idx / n_cav_hole
+    arr_period = period * _tapering(arr_normalized_pos, design['period_taper'])
 
-    def _place_1_device(design, scaling, single_side_mirror_hole_num, xc, yc):
-        rx = design['hole_rad_x'] * scaling
-        ry = design['hole_rad_y'] * scaling
-        period = design['period'] * scaling
-        n_cav_hole = design['single_side_cavity_hole_num']
-        arr_cavityhole_idx = np.arange(1, n_cav_hole+1)
-        arr_normalized_pos = arr_cavityhole_idx / n_cav_hole
-        arr_period = period * _tapering(arr_normalized_pos, design['period_taper'])
+    arr_pos = np.array([sum(arr_period[:i+1]) for i in range(len(arr_period))]) - arr_period[0]/2
+    arr_rx = rx * _tapering(arr_normalized_pos, design['hole_rad_x_taper'])
+    arr_ry = ry * _tapering(arr_normalized_pos, design['hole_rad_y_taper'])
 
-        arr_pos = np.array([sum(arr_period[:i+1]) for i in range(len(arr_period))]) - arr_period[0]/2
-        arr_rx = rx * _tapering(arr_normalized_pos, design['hole_rad_x_taper'])
-        arr_ry = ry * _tapering(arr_normalized_pos, design['hole_rad_y_taper'])
+    arr_mirrorhole_idx = np.arange(1, single_side_mirror_hole_num+1)
+    arr_pos = np.append(
+        arr_pos,
+        arr_pos.max() + arr_mirrorhole_idx * period
+    )
 
-        arr_mirrorhole_idx = np.arange(1, single_side_mirror_hole_num+1)
-        arr_pos = np.append(
-            arr_pos,
-            arr_pos.max() + arr_mirrorhole_idx * arr_period[0]
+    arr_rx = np.append(
+        arr_rx,
+        rx * np.ones_like(arr_mirrorhole_idx)
+    )
+
+    arr_ry = np.append(
+        arr_ry,
+        ry * np.ones_like(arr_mirrorhole_idx)
+    )
+
+    GDS_holes = []
+    for pos, rx, ry in zip(arr_pos, arr_rx, arr_ry):
+        hole_r = gdstk.ellipse(
+            (pos+xc, yc),
+            (rx, ry),
+            tolerance=TOLERANCE,
+            layer=layer,
+            datatype=datatype
         )
-
-        arr_rx = np.append(
-            arr_rx,
-            rx * np.ones_like(arr_mirrorhole_idx)
+        GDS_holes.append(hole_r)
+        hole_l = gdstk.ellipse(
+            (-pos+xc, yc),
+            (rx, ry),
+            tolerance=TOLERANCE,
+            layer=layer,
+            datatype=datatype
         )
+        GDS_holes.append(hole_l)
+    return GDS_holes
 
-        arr_ry = np.append(
-            arr_ry,
-            ry * np.ones_like(arr_mirrorhole_idx)
-        )
 
-        GDS_holes = []
-        for pos, rx, ry in zip(arr_pos, arr_rx, arr_ry):
-            hole_r = gdstk.ellipse(
-                (pos+xc, yc),
-                (rx, ry),
-                tolerance=TOLERANCE,
-                layer=layer,
-                datatype=datatype
-            )
-            GDS_holes.append(hole_r)
-            hole_l = gdstk.ellipse(
-                (-pos+xc, yc),
-                (rx, ry),
-                tolerance=TOLERANCE,
-                layer=layer,
-                datatype=datatype
-            )
-            GDS_holes.append(hole_l)
-        return GDS_holes
-
+def Main_gen_holes(layer=LAYER_MAIN, datatype=0):
+    global GDS_pcc
     for i, j, k in _iter_nanobeams():
         if k == 0:
             GDS_pcc.append([GDS_nanobeams.pop(0)])
@@ -258,13 +259,16 @@ def Main_gen_holes(layer=LAYER_MAIN, datatype=0):
             scaling,
             NUM_MIRROR_HOLE_LIST[k-1],
             xbeam,
-            ybeam
+            ybeam,
+            layer,
+            datatype
         )
         GDS_pcc.append(
             gdstk.boolean(
                 GDS_nanobeams.pop(0),
                 GDS_holes,
                 "not",
+                precision=TOLERANCE,
                 layer=layer
             )
         )
@@ -336,13 +340,44 @@ def Main_place_positioners(layer=LAYER_MAIN, datatype=0):
         GDS_cell.add(circ_r)
 
 
-
 def export_gds(lib, gds_filename="output.gds"):
     lib.write_gds(gds_filename)
     print(f"GDS successfully saved to: {gds_filename}")
 
 
-TOLERANCE = 1e-4
+def gen_individual_gds(folder, layer=LAYER_MAIN, datatype=0):
+    from pathlib import Path
+    folder_path = Path(folder)
+    # if folder_path.exists():
+    #     folder_path.rmdir()
+    folder_path.mkdir(parents=True, exist_ok=True)
+
+    scaling = 1.0
+    xc, yc = 0, 0
+    nanobeam = gdstk.rectangle(
+        (-NANOBEAM_L/2, -NANOBEAM_W/2),
+        (NANOBEAM_L/2, NANOBEAM_W/2),
+        layer=layer, datatype=datatype
+    )
+    for i, design in enumerate(DesignConfig):
+        for mirror_hole_num in NUM_MIRROR_HOLE_LIST:
+            gds_lib = gdstk.Library(str(folder_path/f'S1-D{i+1}-M{mirror_hole_num}'))
+            gds_cell = gds_lib.new_cell('MAIN')
+            holes = _place_1_device(design, scaling, mirror_hole_num, xc, yc, layer=layer, datatype=datatype)
+            beam = nanobeam.copy()
+            gds_cell.add(
+                *gdstk.boolean(
+                    beam,
+                    holes,
+                    "not",
+                    precision=TOLERANCE,
+                    layer=layer
+                )
+            )
+            gds_lib.write_gds(folder_path/f'S1-D{i+1}-M{mirror_hole_num}.gds')
+    
+
+TOLERANCE = 1e-5
 
 WIDTH = 4000.0
 HEIGHT = 6000.0
@@ -380,7 +415,7 @@ NUM_MIRROR_HOLE_LIST = (0, 2, 4, 6, 8)
 
 DesignConfig_fp = "./tantala_pcc_designs.json"
 DesignConfig = load_design_config()
-
+# print(DesignConfig)
 PosOfUnits = np.full((NROW, NCOL, 2), np.nan)
 RelPosYOfNanobeams = np.full(NANOBEAM_NUM_PER_UNIT, np.nan)
 RelPosXOfCouplers = ()
@@ -396,10 +431,15 @@ GDS_coupler_1 = load_couplers()
 
 
 if __name__ == "__main__":
-    init_gds_lib()
     init_pos_of_units()
     init_pos_of_nanobeams()
     init_pos_of_couplers()
+
+    gen_individual_gds("individual_designs")
+    import sys
+    sys.exit(0)
+
+    init_gds_lib()
 
     AuxLine_draw_main_grid()
     # AuxLine_mark_main_region()
