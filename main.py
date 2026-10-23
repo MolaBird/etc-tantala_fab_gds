@@ -347,15 +347,17 @@ def Main_gen_holes(layer=LAYER_MAIN, datatype=0):
 
 def Main_place_couplers(layer=LAYER_MAIN, datatype=0):
     global GDS_devices, GDS_devices_mask
-    # temp_GDS_devices = []
-    # temp_GDS_devices_mask = []
     for i, j, k, n in _iter_devices():
         if i % UNITREPLICA_NUM == 0:
             coupler = Coupler_1
         elif i % UNITREPLICA_NUM == 1:
             coupler = Coupler_2
+        elif i % UNITREPLICA_NUM == 2:
+            coupler = Coupler_3
+        elif i % UNITREPLICA_NUM == 3:
+            coupler = Coupler_3
         else:
-            continue
+            raise ValueError(f"Unsupported unit replica number: {i % UNITREPLICA_NUM}")
         xc, yc = PosOfUnits[i, j]
         y = yc + RelPosYOfDevices[k]
         xl = xc + RelPosXOfCouplers[0]
@@ -390,18 +392,6 @@ def Main_place_couplers(layer=LAYER_MAIN, datatype=0):
                 datatype=datatype
             )
         )
-        # temp_GDS_devices_mask.append(mask)
-        # temp_GDS_devices.append(
-        #     gdstk.boolean(
-        #         device,
-        #         polys,
-        #         "or",
-        #         precision=TOLERANCE,
-        #         layer=layer
-        #     )
-        # )
-    # GDS_devices.extend(temp_GDS_devices)
-    # GDS_devices_mask.extend(temp_GDS_devices_mask)
 
 
 def Main_place_ids(layer=LAYER_MAIN, datatype=0):
@@ -419,7 +409,7 @@ def Main_place_ids(layer=LAYER_MAIN, datatype=0):
         design = i // UNITREPLICA_NUM
         scaling = SCALING_LIST[j]
         id_text = gdstk.text(
-            f"S{scaling:.3f}-D{design+1}-U{unit_id+1}",
+            f"S{scaling:.3f}-D{design}-U{unit_id+1}",
             size=ID_TEXT_SIZE,
             position=(xc, yc + UNITREGION_H/2 + ID_TEXT_OFFSET_Y), # align to center
             layer=layer,
@@ -498,7 +488,7 @@ def gen_individual_gds(folder, layer=LAYER_MAIN, datatype=0):
     )
     for i, design in enumerate(DesignConfig):
         for mirror_hole_num in NUM_MIRROR_HOLE_LIST:
-            gds_lib = gdstk.Library(str(folder_path/f'S1-D{i+1}-M{mirror_hole_num}'))
+            gds_lib = gdstk.Library(str(folder_path/f'S1-D{i}-M{mirror_hole_num}'))
             gds_cell = gds_lib.new_cell('MAIN')
             holes = _place_1_device(design, scaling, mirror_hole_num, xc, yc, layer=layer, datatype=datatype)
             beam = nanobeam.copy()
@@ -511,10 +501,10 @@ def gen_individual_gds(folder, layer=LAYER_MAIN, datatype=0):
                     layer=layer
                 )
             )
-            gds_lib.write_gds(folder_path/f'S1-D{i+1}-M{mirror_hole_num}.gds')
+            gds_lib.write_gds(folder_path/f'S1-D{i}-M{mirror_hole_num}.gds')
     
 
-TOLERANCE = 1e-5
+TOLERANCE = 1e-6
 
 WIDTH = 4000.0
 HEIGHT = 6000.0
@@ -553,7 +543,7 @@ SCALING_LIST = np.arange(-10, 11, 1) * 0.005 + 1
 NUM_MIRROR_HOLE_LIST = (0, 2, 4, 6, 8)
 
 
-DesignConfig_fp = "./tantala_pcc_designs.json"
+DesignConfig_fp = "./pcc_designs-opt.json"
 DesignConfig = load_design_config()
 # print(DesignConfig)
 PosOfUnits = np.full((NROW, NCOL, 2), np.nan)
@@ -569,22 +559,22 @@ GDS_devices_mask = []
 
 fp_coupler_1 = "./coupler_old.gds"
 fp_coupler_2 = "./coupler_new_Austin.gds"
-# fp_coupler_3 = "./coupler_new_Henry.gds"
+fp_coupler_3 = "./coupler_new_Henry.gds"
 
 from collections import namedtuple
 Coupler = namedtuple("Coupler", ["coupler", "extents", "xmin", "xmax", "ymin", "ymax"])
 Coupler_1 :Coupler= load_coupler(fp_coupler_1, arm_spacing=2, arm_width=0.5, arm_taper_radius=0.8)
 Coupler_2 :Coupler= load_coupler(fp_coupler_2, arm_spacing=2, arm_width=1.0, arm_taper_radius=1)
-# GDS_coupler_3 = load_coupler(fp_coupler_3)
+Coupler_3 :Coupler= load_coupler(fp_coupler_3, arm_spacing=2, arm_width=1.0, arm_taper_radius=1)
 
 if __name__ == "__main__":
     init_pos_of_units()
     init_pos_of_nanobeams()
     init_pos_of_couplers()
 
-    # gen_individual_gds("individual_designs")
-    # import sys
-    # sys.exit(0)
+    gen_individual_gds("design_gds-opt")
+    import sys
+    sys.exit(0)
 
     init_gds_lib()
 
@@ -606,7 +596,7 @@ if __name__ == "__main__":
     for dev in GDS_devices:
         GDS_cell.add(*dev)
 
-    export_gds(GDS_lib, gds_filename="cavity_array.gds")
+    export_gds(GDS_lib, gds_filename="cavity_array-opt.gds")
 
 
 
