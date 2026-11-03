@@ -617,10 +617,10 @@ if __name__ == "__main__":
     init_pos_of_units()
     init_pos_of_nanobeams()
     init_pos_of_couplers()
-    # gen_individual_gds_scale1("design_gds-comsol")
-    # gen_individual_gds_design3("design_gds-comsol-scale_tend")
-    # import sys
-    # sys.exit(0)
+    gen_individual_gds_scale1("design_gds-comsol")
+    # gen_individual_gds_design3("design_gds-comsol-scale_trend")
+    import sys
+    sys.exit(0)
 
     init_gds_lib()
 
